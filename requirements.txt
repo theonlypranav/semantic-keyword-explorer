@@ -1,0 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+streamlit>=1.46
+sentence-transformers>=3.0
+keybert>=0.8
+scikit-learn
+numpy
+pandas
+plotly>=5.20
+umap-learn
