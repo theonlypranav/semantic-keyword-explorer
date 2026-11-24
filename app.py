@@ -250,6 +250,3 @@ with st.expander("Sentence explorer — 50 sentences, 5 topics (3D view, heatmap
                                        for i, j, s in sa["same"]],
                                       columns=["topic", "sentence A", "sentence B", "cosine"]),
                          hide_index=True, use_container_width=True)
-
-with st.expander("Accessibility: WCAG contrast of theme tokens"):
-    st.dataframe(pd.DataFrame(T.contrast_report()), hide_index=True, use_container_width=True)
