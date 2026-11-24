@@ -173,7 +173,7 @@ if run:
         top = kws[int(rel.argmax())]
         st.caption(f"Text summary: {len(kws)} keywords; most relevant is “{top}” ({rel.max():.3f}), least is "
                    f"“{kws[int(rel.argmin())]}” ({rel.min():.3f}). {nlinks} keyword pairs overlap at ≥ {threshold:.2f}. "
-                   "Closer to the centre and larger = more relevant.")
+                   "Closer to the centre and larger = more relevant. Drag to rotate, scroll to zoom.")
         if sel and run.get("support"):
             i = kws.index(sel)
             sent = run["sentences"][run["support"][i]]

@@ -6,57 +6,68 @@ import plotly.graph_objects as go
 
 from . import similarity as S
 from . import theme as T
-from .project3d import pca_angles
+from .project3d import pca_directions_3d
 
 
 def constellation(keywords, relevance, kw_vecs, threshold: float, mode: str, selected: str | None = None):
+    """3D constellation: paragraph at the origin, keywords on spherical shells by relevance."""
     t = T.TOKENS[mode]
     rel = np.asarray(relevance, dtype=float)
     n = len(keywords)
     sim = S.cosine_matrix(kw_vecs) if n else np.zeros((0, 0))
-    # Higher relevance -> closer to centre. Map relevance range to radius 0.35..1.
     lo, hi = (rel.min(), rel.max()) if n else (0, 1)
     span = (hi - lo) or 1.0
-    radius = 0.35 + 0.65 * (hi - rel) / span
-    ang = pca_angles(kw_vecs) if n else np.zeros(0)
-    x, y = radius * np.cos(ang), radius * np.sin(ang)
+    radius = 0.35 + 0.65 * (hi - rel) / span  # more relevant -> closer to the centre
+    dirs = pca_directions_3d(kw_vecs) if n else np.zeros((0, 3))
+    xyz = dirs * radius[:, None]
     fig = go.Figure()
-    # Rings
+    # Shell guides: three orthogonal great circles per relevance shell
+    th = np.linspace(0, 2 * np.pi, 90)
+    c, s_ = np.cos(th), np.sin(th)
+    z0 = np.zeros_like(th)
     for r in (0.35, 0.675, 1.0):
-        th = np.linspace(0, 2 * np.pi, 120)
-        fig.add_trace(go.Scatter(x=r * np.cos(th), y=r * np.sin(th), mode="lines", hoverinfo="skip",
-                                 line=dict(color=t["border"], width=1, dash="dot"), showlegend=False))
-    # Links above threshold
+        for a, b, cc in ((c, s_, z0), (c, z0, s_), (z0, c, s_)):
+            fig.add_trace(go.Scatter3d(x=r * a, y=r * b, z=r * cc, mode="lines", hoverinfo="skip",
+                                       line=dict(color=t["border"], width=1), showlegend=False))
+    # Spokes to the paragraph
+    sx, sy, sz = [], [], []
+    for p in xyz:
+        sx += [0, p[0], None]; sy += [0, p[1], None]; sz += [0, p[2], None]
+    fig.add_trace(go.Scatter3d(x=sx, y=sy, z=sz, mode="lines", hoverinfo="skip",
+                               line=dict(color=t["text_secondary"], width=1), opacity=0.35, showlegend=False))
+    # Keyword-to-keyword links above threshold, width by overlap
     links = S.links_above(sim, threshold) if n else []
     for i, j, s in links:
-        fig.add_trace(go.Scatter(x=[x[i], x[j]], y=[y[i], y[j]], mode="lines", hoverinfo="text",
-                                 text=f"{keywords[i]} ↔ {keywords[j]}: {s:.2f}",
-                                 line=dict(color=t["threshold_link"], width=1 + 8 * max(0.0, s - threshold) / max(1e-6, 1 - threshold) + 0.5),
-                                 opacity=0.85, showlegend=False))
-    # Spokes to centre
-    for i in range(n):
-        fig.add_trace(go.Scatter(x=[0, x[i]], y=[0, y[i]], mode="lines", hoverinfo="skip",
-                                 line=dict(color=t["border"], width=1), showlegend=False))
+        w = 2 + 10 * max(0.0, s - threshold) / max(1e-6, 1 - threshold)
+        mid = (xyz[i] + xyz[j]) / 2
+        fig.add_trace(go.Scatter3d(x=[xyz[i, 0], mid[0], xyz[j, 0]], y=[xyz[i, 1], mid[1], xyz[j, 1]],
+                                   z=[xyz[i, 2], mid[2], xyz[j, 2]], mode="lines", hoverinfo="text",
+                                   text=f"{keywords[i]} ↔ {keywords[j]}: {s:.2f}",
+                                   line=dict(color=t["threshold_link"], width=w), showlegend=False))
     partner = S.closest_partner(sim) if n > 1 else np.zeros(n, dtype=int)
     hover = [
         f"<b>{k}</b><br>relevance {r:.3f}" + (f"<br>closest: {keywords[p]} ({sim[i, p]:.2f})" if n > 1 else "")
         for i, (k, r, p) in enumerate(zip(keywords, rel, partner))
     ]
-    sizes = 14 + 30 * (rel - lo) / span
+    sizes = 8 + 14 * (rel - lo) / span
     colours = [t["beige_accent"] if k == selected else t["beige_fill"] for k in keywords]
-    fig.add_trace(go.Scatter(
-        x=x, y=y, mode="markers+text", text=list(keywords), textposition="top center",
-        textfont=dict(color=t["text"], size=13), hovertext=hover, hoverinfo="text",
-        marker=dict(size=sizes, color=colours, line=dict(color=t["beige_accent"], width=2)),
-        showlegend=False, customdata=list(keywords),
+    fig.add_trace(go.Scatter3d(
+        x=xyz[:, 0], y=xyz[:, 1], z=xyz[:, 2], mode="markers+text", text=list(keywords),
+        textposition="top center", textfont=dict(color=t["text"], size=13), hovertext=hover, hoverinfo="text",
+        marker=dict(size=sizes, color=colours, opacity=1, line=dict(color=t["beige_accent"], width=3)),
+        showlegend=False))
+    fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode="markers+text", text=["Paragraph"],
+                               textposition="bottom center", textfont=dict(color=t["text_secondary"]),
+                               hoverinfo="text", hovertext="Paragraph embedding",
+                               marker=dict(size=10, color=t["text"], symbol="diamond"), showlegend=False))
+    axis = dict(visible=False, range=[-1.15, 1.15])
+    fig.update_layout(**T.layout(
+        mode, height=620,
+        scene=dict(xaxis=axis, yaxis=axis, zaxis=axis, aspectmode="cube", bgcolor=t["surface"],
+                   camera=dict(eye=dict(x=1.35, y=1.35, z=0.9))),
+        title=dict(text=f"Keyword constellation (3D, drag to rotate) — {len(links)} links ≥ {threshold:.2f}",
+                   font=dict(color=t["text"])),
     ))
-    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers+text", text=["Paragraph"], textposition="bottom center",
-                             textfont=dict(color=t["text_secondary"]), hoverinfo="text", hovertext="Paragraph embedding",
-                             marker=dict(size=22, color=t["text"], symbol="star"), showlegend=False))
-    ax = dict(visible=False, range=[-1.25, 1.25])
-    fig.update_layout(**T.layout(mode, height=560, xaxis=ax, yaxis=dict(ax, scaleanchor="x"),
-                                 title=dict(text=f"Keyword constellation — {len(links)} links ≥ {threshold:.2f}",
-                                            font=dict(color=t["text"]))))
     return fig, len(links)
 
 
