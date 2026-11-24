@@ -13,7 +13,6 @@ from core import evaluate as V
 from core import export as X
 from core import extract as K
 from core import preprocess as P
-from core import project3d as U
 from core import similarity as S
 from core import theme as T
 from core import viz
@@ -27,23 +26,12 @@ ss.setdefault("history", [])
 ss.setdefault("run", None)
 ss.setdefault("pending", False)
 
-# ---------- Header + theme ----------
-h1, h2 = st.columns([4, 1.4])
-with h2:
-    choice = st.segmented_control("Theme", ["Light", "Dark", "System"], default="System", key="theme_choice",
-                                  label_visibility="collapsed") or "System"
-try:
-    system_type = st.context.theme.type
-except Exception:
-    system_type = None
-mode = T.resolve(choice, system_type)
+# ---------- Header (dark theme only) ----------
+mode = "dark"
 st.markdown(T.css(mode), unsafe_allow_html=True)
-tok = T.TOKENS[mode]
-
-with h1:
-    st.title("Semantic Keyword Explorer")
-    st.caption("Paste a paragraph → 10 keywords, scored for relevance and overlap with sentence embeddings. "
-               "Runs locally with open models, no paid APIs.")
+st.title("Semantic Keyword Explorer")
+st.caption("Paste a paragraph → 10 keywords, scored for relevance and overlap with sentence embeddings. "
+           "Runs locally with open models, no paid APIs.")
 
 
 # ---------- Input ----------
@@ -198,55 +186,3 @@ if run:
                        use_container_width=True)
     d3.download_button("Download constellation.html", X.fig_html(fig), "constellation.html", "text/html",
                        use_container_width=True)
-
-
-# ---------- Sentence explorer ----------
-@st.cache_data(show_spinner="Embedding the 50-sentence dataset…")
-def sentence_analysis(model_name: str):
-    sents = [s for _, s in D.SENTENCES]
-    labels = [l for l, _ in D.SENTENCES]
-    vecs = E.embed(sents, model_name)
-    sim = S.cosine_matrix(vecs)
-    cross, same = V.failure_pairs(sim, labels)
-    return {
-        "sents": sents, "labels": labels, "sim": sim,
-        "nn_acc": V.nn_topic_accuracy(vecs, labels), "ari": V.cluster_ari(vecs, labels),
-        "c3": U.umap_reduce(vecs, 3), "c2": U.umap_reduce(vecs, 2), "cross": cross, "same": same,
-    }
-
-
-st.divider()
-with st.expander("Sentence explorer — 50 sentences, 5 topics (3D view, heatmap, network, failures)"):
-    if st.toggle("Load sentence explorer", key="load_explorer"):
-        sa = sentence_analysis(model)
-        e1, e2 = st.columns(2)
-        e1.metric("Nearest-neighbour topic accuracy", f"{sa['nn_acc']:.0%}")
-        e2.metric("Adjusted Rand Index (KMeans, k=5, seed 42)", f"{sa['ari']:.3f}")
-        tab3d, tabh, tabn, tabf = st.tabs(["3D view", "Heatmap", "Network", "Failure panel"])
-        with tab3d:
-            pick = st.selectbox("Highlight a sentence", [None] + list(range(len(sa["sents"]))),
-                                format_func=lambda i: "—" if i is None else sa["sents"][i])
-            f3 = viz.scatter3d(sa["sents"], sa["labels"], sa["c3"], mode, highlight=pick)
-            st.plotly_chart(f3, use_container_width=True, theme=None)
-            st.caption("Text summary: each point is a sentence, coloured and shaped by topic. Drag to rotate. "
-                       "UMAP is exploratory — use the numeric scores for conclusions.")
-            st.download_button("Download 3D view (HTML)", X.fig_html(f3), "embedding3d.html", "text/html")
-        with tabh:
-            fh = viz.heatmap(sa["sents"], sa["labels"], sa["sim"], mode, st.toggle("Sort by topic", True))
-            st.plotly_chart(fh, use_container_width=True, theme=None)
-            st.caption("Text summary: bright diagonal blocks mean sentences within a topic are similar to each other.")
-        with tabn:
-            nt = st.slider("Edge threshold", 0.0, 1.0, 0.35, 0.01, key="net_t")
-            st.plotly_chart(viz.network(sa["sents"], sa["labels"], sa["sim"], nt, sa["c2"], mode),
-                            use_container_width=True, theme=None)
-        with tabf:
-            st.markdown("**Most similar cross-topic pairs** (the model thinks these are related)")
-            st.dataframe(pd.DataFrame([(sa["labels"][i], sa["sents"][i], sa["labels"][j], sa["sents"][j], round(s, 3))
-                                       for i, j, s in sa["cross"]],
-                                      columns=["topic A", "sentence A", "topic B", "sentence B", "cosine"]),
-                         hide_index=True, use_container_width=True)
-            st.markdown("**Least similar same-topic pairs** (the model misses the shared topic)")
-            st.dataframe(pd.DataFrame([(sa["labels"][i], sa["sents"][i], sa["sents"][j], round(s, 3))
-                                       for i, j, s in sa["same"]],
-                                      columns=["topic", "sentence A", "sentence B", "cosine"]),
-                         hide_index=True, use_container_width=True)

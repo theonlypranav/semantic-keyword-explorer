@@ -46,7 +46,7 @@ for model in E.MODELS:
     for i, j, s in same:
         out.append(f"- {s:.2f} · [{labels[i]}] {sents[i]} ↔ {sents[j]}")
 
-out.append("\n## WCAG contrast (both themes)\n")
+out.append("\n## WCAG contrast (dark theme)\n")
 out.append("| Theme | Pair | Ratio | AA |")
 out.append("|---|---|---|---|")
 for r in T.contrast_report():

@@ -50,12 +50,11 @@ def test_input_validation_and_windows():
     assert len(wins) > 1 and all(len(w.split()) <= 50 for w in wins)
 
 
-def test_theme_contrast_wcag_aa():
+def test_dark_theme_contrast_wcag_aa():
     failing = [r for r in T.contrast_report() if not r["AA"]]
     assert not failing, failing
 
 
-def test_topic_colours_identical_across_themes():
-    # Topic colours are defined once, outside the per-theme tokens.
-    assert all(c not in T.TOKENS["light"].values() for c in T.TOPIC_COLOURS)
+def test_topic_colours_distinct():
+    assert set(T.TOKENS) == {"dark"}
     assert len(set(T.TOPIC_COLOURS)) == 5 and len(set(T.TOPIC_SYMBOLS_2D)) == 5

@@ -1,18 +1,7 @@
-"""Colour tokens (single source of truth), CSS injection and Plotly styling."""
+"""Dark-theme colour tokens (single source of truth), CSS injection and Plotly styling."""
 from __future__ import annotations
 
 TOKENS: dict[str, dict[str, str]] = {
-    "light": {
-        "background": "#FAF8F4",
-        "surface": "#FFFFFF",
-        "text": "#2B2A27",
-        "text_secondary": "#5F5C55",
-        "border": "#E4E0D8",
-        "beige_fill": "#F3E7CC",
-        "text_on_beige": "#4A3B1E",
-        "beige_accent": "#B8935A",
-        "threshold_link": "#8C6D3F",
-    },
     "dark": {
         "background": "#1C1B19",
         "surface": "#262522",
@@ -26,7 +15,7 @@ TOKENS: dict[str, dict[str, str]] = {
     },
 }
 
-# Same in both themes (F7.6 / AC13). Colour + shape together for accessibility.
+# Topic colours. Colour + shape together for accessibility.
 TOPIC_COLOURS = ["#378ADD", "#D85A30", "#639922", "#7F77DD", "#D4537E"]
 TOPIC_SYMBOLS_2D = ["circle", "square", "diamond", "triangle-up", "star"]
 TOPIC_SYMBOLS_3D = ["circle", "square", "diamond", "cross", "x"]
@@ -39,7 +28,7 @@ CONTRAST_PAIRS = [
     ("text_secondary", "surface"),
     ("text_on_beige", "beige_fill"),
 ]
-BUTTON_TEXT = {"light": "#1C1B19", "dark": "#1C1B19"}
+BUTTON_TEXT = {"dark": "#1C1B19"}
 
 
 def _lin(c: float) -> float:
@@ -68,15 +57,7 @@ def contrast_report() -> list[dict]:
     return rows
 
 
-def resolve(choice: str, system_type: str | None) -> str:
-    """Map Light/Dark/System to 'light' or 'dark'."""
-    c = (choice or "System").lower()
-    if c in ("light", "dark"):
-        return c
-    return "dark" if (system_type or "").lower() == "dark" else "light"
-
-
-def css(mode: str) -> str:
+def css(mode: str = "dark") -> str:
     t = TOKENS[mode]
     btn = BUTTON_TEXT[mode]
     return f"""
@@ -100,11 +81,8 @@ def css(mode: str) -> str:
 .stApp button[kind="primary"] p, .stApp [data-testid="stBaseButton-primary"] p {{ color: {btn} !important; }}
 .stApp button[kind="secondary"], .stApp [data-testid="stBaseButton-secondary"] {{
   background-color: {t['surface']} !important; color: {t['text']} !important; border-color: {t['border']} !important; }}
-.stApp [data-testid="stBaseButton-segmented_control"], .stApp [data-testid="stBaseButton-segmented_controlActive"] {{
   background-color: {t['surface']} !important; color: {t['text']} !important; border-color: {t['border']} !important; }}
-.stApp [data-testid="stBaseButton-segmented_controlActive"] {{
   background-color: {t['beige_fill']} !important; color: {t['text_on_beige']} !important; }}
-.stApp [data-testid="stBaseButton-segmented_controlActive"] p {{ color: {t['text_on_beige']} !important; }}
 /* Slider: beige track + thumb */
 .stApp [data-baseweb="slider"] [role="slider"] {{ background-color: {t['beige_accent']} !important;
   box-shadow: none !important; }}
@@ -124,11 +102,11 @@ table.kw tr:hover td {{ background:{t['beige_fill']}; color:{t['text_on_beige']}
 """
 
 
-def layout(mode: str, **extra) -> dict:
+def layout(mode: str = "dark", **extra) -> dict:
     """Plotly layout with explicit colours so templates don't override them."""
     t = TOKENS[mode]
     base = dict(
-        template="plotly_dark" if mode == "dark" else "plotly_white",
+        template="plotly_dark",
         paper_bgcolor=t["surface"],
         plot_bgcolor=t["surface"],
         font=dict(color=t["text"]),
