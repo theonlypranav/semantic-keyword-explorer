@@ -13,7 +13,8 @@ from core import similarity as S  # noqa: E402
 from core import theme as T  # noqa: E402
 
 out = ["# Results\n", f"_Generated {time.strftime('%Y-%m-%d')} by `scripts/evaluate.py`._\n"]
-for model in E.MODELS:
+MODELS = sys.argv[1:] or E.MODELS
+for model in MODELS:
     out.append(f"\n## {model}\n")
     sents = [s for _, s in D.SENTENCES]
     labels = [l for l, _ in D.SENTENCES]
