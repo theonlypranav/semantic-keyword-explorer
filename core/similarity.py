@@ -6,7 +6,7 @@ import numpy as np
 
 def normalise(m: np.ndarray) -> np.ndarray:
     m = np.atleast_2d(np.asarray(m, dtype=np.float64))
-    return m / (np.linalg.norm(m, axis=1, keepdims=True) + 1e-12)
+    return m / np.maximum(np.linalg.norm(m, axis=1, keepdims=True), 1e-12)
 
 
 def cosine_matrix(a: np.ndarray, b: np.ndarray | None = None) -> np.ndarray:
