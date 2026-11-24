@@ -1,5 +1,9 @@
 # Semantic Keyword Explorer
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://theonlypranav-semantic-keyword-explorer-app-z9wzkl.streamlit.app/)
+
+**Live demo:** https://theonlypranav-semantic-keyword-explorer-app-z9wzkl.streamlit.app/
+
 Paste a paragraph and get its 10 most representative keywords. Each keyword is scored with sentence embeddings for **relevance** (how close it is to the paragraph) and **overlap** (how close it is to the other keywords). The results show up as an interactive keyword constellation with an overlap-threshold slider. Everything runs on open models (`sentence-transformers`), with no paid API calls.
 
 ## Features
